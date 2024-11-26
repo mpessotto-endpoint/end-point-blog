@@ -265,4 +265,63 @@ Dancer), you still have the decision to make.
 
 ### Controllers
 
-### The languages
+The way the routes are defined are pretty much similar. Usually you
+put the code in a class and then point to it, attaching a name to it
+so you can reference it elsewhere.
+
+Language is different, style is different, but pretty much the same thing:
+
+Django:
+
+```python
+from django.urls import path
+from . import views
+urlpatterns = [
+    path("api/agents/<int:agent_id>", views.api_agent_view, name="api_agent_view"),
+]
+```
+
+The function `views.api_agent_view` will receive the request with the agent_id
+as parameter.
+
+
+Mojolicious:
+
+```perl
+sub startup ($self) {
+    # ....
+    my $r = $self->routes;
+    $r->get('/list/:sid')->to('API#list_texts')->name('api_list_texts');
+}
+```
+
+The `->to` method is basically routing the request to the
+`Myapp::Controller::API::list_texts` will receive the request with the
+`sid` as parameter.
+
+This is pretty much the core business of every web framework: routing
+a request to a given function.
+
+Mojolicious has also the ability to [chain the
+routes](https://docs.mojolicious.org/Mojolicious/Guides/Routing#Under)
+(pretty much taken from Catalyst). Typical usage is authorization:
+
+```perl
+sub startup ($self) {
+    ...
+    my $r = $self->routes;
+    my $api = $r->under('/api/v1', sub ($c) {
+        if ($c->req->headers->header('X-API-Key') eq 'testkey') {
+            return 1;
+        }
+        $c->render(text => 'Authentication required!', status => 401);
+        return undef;
+    }
+    $api->get('/check')->to('API#check')->name('api_check');
+```
+
+So the request to `/api/v1/check` will first go in the first block and
+the chain will abort if the API key is not set in the header,
+otherwise it will proceed to the dispatch to the `API` module, `check`
+function.
+
