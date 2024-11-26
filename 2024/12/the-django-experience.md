@@ -77,7 +77,191 @@ Nothing complicate here, just provide the right call.
 
 ### Models
 
+#### Django
 
+Usually a model in the web development context means a database and
+here we are going to keep this assumption.
+
+Django comes with a comprehensive [Object-relational mapping
+system](https://docs.djangoproject.com/en/5.1/topics/db/queries/) and
+it feels like the natural thing to use. I don't think it makes much
+sense to use another ORM with it or even using raw SQL query (even if
+it's [possible](https://docs.djangoproject.com/en/5.1/topics/db/sql/)).
+
+So usually you start a Django project defining the model. The Django
+ORM gives you the tools to manage the migrations abstracting away from
+the SQL. You define the field type using the appropriate class methods.
+
+E.g.
+
+```python
+from django.db import models
+class User(AbstractUser):
+    email = models.EmailField(null=False, blank=False)
+    expiration = models.DateTimeField(null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    last_modified = models.DateTimeField(auto_now=True)
+```
+
+These calls provide not only the SQL type to use, but also the
+validation, so we're, so to speak, quite far from the SQL, at least
+two abstraction layers away. For example the `blank` parameter is a
+validation thing.
+
+Thanks to this, you get, almost for free, a whole [admin
+console](https://docs.djangoproject.com/en/5.1/ref/contrib/admin/),
+which for sure your admin user are going to like. However, I'm not
+sure this is a silver bullet solving all problems. With large tables
+and relationships the loading of the admin pages is slow and could
+become unusable very quickly. Of course you can tune that, filter out
+what you need and what you don't. I'm just saying that things are not
+as simple as "an admin dashboard for free". There's at very least some
+configuration to do.
+
+As for the query syntax, you usually need to call
+`Class.objects.filter()`. As you would expect from an ORM you can
+chain the calls and finally get objects out of that, representing a
+database row, which in turn you can update or delete.
+
+The syntax for the `filter()` call is based on the double underscore
+separator, so you can query over the relationships with things like this:
+
+```python
+for agent in (Agent.objects.filter(canonical_agent_id__isnull=False)
+              .prefetch_related('canonical_agent')
+              .order_by('canonical_agent__name', 'name')
+              .all()):
+    agent.name = "Dummy"
+    agent.save()
+```
+
+In this case, provided that we defined the foreign keys and the
+attributes in the model, we can search/order across the relationship.
+The `__isnull` suffix, as you can imagine, results in a
+`WHERE canonical_agent_id IS NOT NULL` query, while in the `order_by` call
+we are sorting over the joined table using the `name` column. Looks
+nice and readable, with a touch of magic.
+
+Of course things are never so simple, so you can build complex query
+with the `Q` class combining them with bytewise operators (`&`, `|`).
+
+Example of a simple case-insensitive search for a name containing
+multiple words:
+
+```
+from django.db.models import Q
+
+def api_list(request)
+    term = request.GET.get('search')
+    if term
+        words = [ w for w in re.split(r'\W+', term) if w ]
+        if words:
+            query = Q(name__icontains=words.pop())
+            while words:
+                query = query & Q(name__icontains=words.pop())
+            # logger.debug(query)
+            agents = Agent.objects.filter(query).all()
+```
+
+To sum up, the ORM is providing everything you need to stay away from
+the SQL.
+
+#### Mojolicious and Perl
+
+In the Perl world things are a bit different.
+
+The Mojolicious
+[tutorial](https://docs.mojolicious.org/Mojolicious/Guides/Tutorial)
+doesn't even mention the database. Basically, you can use any ORM or
+no ORM at all, if you prefer so. However, Mojo gives you the way to
+create make the DB handle available everywhere in the application.
+
+You could use, e.g.
+[DBIx::Connector](https://metacpan.org/pod/DBIx::Connector),
+[DBIx::Class](https://metacpan.org/pod/DBIx::Class) or
+[Mojo::Pg](https://docs.mojolicious.org/Mojo/Pg) (which was developed
+with Mojolicious) or whatever you prefer.
+
+So for example, in the main application class:
+
+```perl
+package MyApp;
+use Mojo::Base 'Mojolicious', -signatures;
+use Mojo::Pg;
+use Data::Dumper::Concise;
+
+sub startup ($self) {
+    my $config = $self->plugin('NotYAMLConfig');
+    $self->log->info("Starting up with " . Dumper($config));
+    $self->helper(pg => sub {
+                      state $pg = Mojo::Pg->new($config->{dbi_connection_string});
+                  });
+```
+
+And in the routes you can call `$self->pg` and get the handle.
+
+The three approaches I'm mentioning here are different.
+
+The `DBIx::Connector` is basically a way to get you a safe DBI handle
+across forks and DB connection failures.
+
+`Mojo::Pg` gives you the ability to do abstract queries but also some
+convenience methods to get the results. I wouldn't call it a full ORM.
+From a query you usually gets hashes, not objects, you don't need to
+define the database layout, it won't produce migrations for you
+(there's some [migration
+support](https://docs.mojolicious.org/Mojo/Pg/Migrations) though).
+
+Example:
+
+```perl
+sub list_texts ($self) {
+    if (my $sid = $self->param('sid')) {
+        my $sql = 'SELECT * FROM texts WHERE sid = ? ORDER BY sorting_index';
+        @all = $self->pg->db->query($sql, $sid)->hashes->each;
+    }
+    $self->render(json => { texts => \@all });
+```
+
+The query above can be rewritten with an abstract query, using the same module.
+
+```
+        @all = $self->pg->db->select(texts => undef,
+                                     { sid => $sid },
+                                     { order_by => 'sorting_index' })->hashes->each;
+```
+
+If it's a simple, static query, it's basically a matter of taste if
+you want to see the SQL or not. The second version is usually nicer if
+you want to build a different query depending on the parameters.
+
+Now, speaking about tastes, for complex queries with a lot of joins I
+honestly prefer to see the SQL query instead of wondering if the
+abstract one is producing the correct SQL.
+
+Finally, nothing stops you from using `DBIx::Class`, which is the best
+ORM for Perl, even if it's not exactly light on dependencies.
+
+It's very versatile, it can build query of arbitrary complexity, you
+usually get objects out of the queries you make. It doesn't come with
+and admin dashboard, it doesn't enforce the data types and it doesn't
+ship any validation by default (of course you can build on that). The
+query syntax is very close to the `Mojo::Pg` one (which is basically
+[SQL::Abstract](https://metacpan.org/pod/SQL::Abstract)).
+
+The gain here is that, like in Django ORM, you can attach your methods
+to the classes representing the rows, so the data definitions live
+with the code operating on it.
+
+However, the fact that it builds object for each result, it means
+you're paying a performance penalty which sometimes can be very high,
+and I think this is the common problem of the ORMs, regardless of the
+language and framework you're using.
+
+The difference is that with Django, once you have chosen it as your
+framework, you are basically already sold to using the ORM. With
+Mojolicious and in general with the other Perl frameworks (Catalyst,
+Dancer), you still have the decision to make.
 
 ### Controllers
 
