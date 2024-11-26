@@ -1,9 +1,10 @@
 ---
 author: "Marco Pessotto"
 date: 2024-11-26
-title: "The Django Experience"
+title: "Django and Mojolicious: a quick comparison of two popular web frameworks"
 tags:
  - perl
+ - python
  - web
  - mojolicious
  - catalyst
@@ -11,7 +12,6 @@ tags:
  - django
  - orm
  - dbic
- - dancer
 ---
 
 ### Django and Mojolicious
