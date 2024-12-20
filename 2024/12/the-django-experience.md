@@ -1,6 +1,6 @@
 ---
 author: "Marco Pessotto"
-date: 2024-11-26
+date: 2024-12-20
 title: "Django and Mojolicious: a quick comparison of two popular web frameworks"
 tags:
  - perl
@@ -90,7 +90,8 @@ it's [possible](https://docs.djangoproject.com/en/5.1/topics/db/sql/)).
 
 So usually you start a Django project defining the model. The Django
 ORM gives you the tools to manage the migrations abstracting away from
-the SQL. You define the field type using the appropriate class methods.
+the SQL. You need to define the field types and the relationships
+(joins and foreign keys) using the appropriate class methods.
 
 E.g.
 
@@ -98,6 +99,8 @@ E.g.
 from django.db import models
 class User(AbstractUser):
     email = models.EmailField(null=False, blank=False)
+    site = models.ForeignKey(Site, on_delete=models.CASCADE, related_name="site_users")
+    libraries = models.ManyToManyField(Library, related_name="affiliated_users")
     expiration = models.DateTimeField(null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
@@ -108,14 +111,19 @@ validation, so we're, so to speak, quite far from the SQL, at least
 two abstraction layers away. For example the `blank` parameter is a
 validation thing.
 
+In the example above, we're also defining a foreign key to a site
+(many-to-one), so each user needs to belong to one, and a many-to-many
+relationship with the libraries record. I like how these relationships
+are defined, it's very concise.
+
 Thanks to this, you get, almost for free, a whole [admin
 console](https://docs.djangoproject.com/en/5.1/ref/contrib/admin/),
 which for sure your admin user are going to like. However, I'm not
 sure this is a silver bullet solving all problems. With large tables
-and relationships the loading of the admin pages is slow and could
-become unusable very quickly. Of course you can tune that, filter out
-what you need and what you don't. I'm just saying that things are not
-as simple as "an admin dashboard for free". There's at very least some
+and relationships the admin pages load slowly and they could become
+unusable very quickly. Of course you can tune that, filter out what
+you need and what you don't. I'm just saying that things are not as
+simple as "an admin dashboard for free". There's at very least some
 configuration to do.
 
 As for the query syntax, you usually need to call
@@ -148,7 +156,7 @@ with the `Q` class combining them with bytewise operators (`&`, `|`).
 Example of a simple case-insensitive search for a name containing
 multiple words:
 
-```
+```python
 from django.db.models import Q
 
 def api_list(request)
@@ -164,7 +172,8 @@ def api_list(request)
 ```
 
 To sum up, the ORM is providing everything you need to stay away from
-the SQL.
+the SQL. Actually, it seems like Django doesn't like you doing raw SQL
+queries.
 
 #### Mojolicious and Perl
 
@@ -172,9 +181,9 @@ In the Perl world things are a bit different.
 
 The Mojolicious
 [tutorial](https://docs.mojolicious.org/Mojolicious/Guides/Tutorial)
-doesn't even mention the database. Basically, you can use any ORM or
-no ORM at all, if you prefer so. However, Mojo gives you the way to
-create make the DB handle available everywhere in the application.
+doesn't even mention the database. You can use any ORM or no ORM at
+all, if you prefer so. However, Mojo gives you the way to make the DB
+handle available everywhere in the application.
 
 You could use, e.g.
 [DBIx::Connector](https://metacpan.org/pod/DBIx::Connector),
@@ -198,7 +207,7 @@ sub startup ($self) {
                   });
 ```
 
-And in the routes you can call `$self->pg` and get the handle.
+And in the routes you can call `$self->pg` and get the database object.
 
 The three approaches I'm mentioning here are different.
 
@@ -206,11 +215,10 @@ The `DBIx::Connector` is basically a way to get you a safe DBI handle
 across forks and DB connection failures.
 
 `Mojo::Pg` gives you the ability to do abstract queries but also some
-convenience methods to get the results. I wouldn't call it a full ORM.
-From a query you usually gets hashes, not objects, you don't need to
-define the database layout, it won't produce migrations for you
-(there's some [migration
-support](https://docs.mojolicious.org/Mojo/Pg/Migrations) though).
+convenience methods to get the results. I wouldn't call it a ORM. From
+a query you usually gets hashes, not objects, you don't need to define
+the database layout, it won't produce migrations for you, even if there's
+some [migration support](https://docs.mojolicious.org/Mojo/Pg/Migrations).
 
 Example:
 
@@ -225,7 +233,7 @@ sub list_texts ($self) {
 
 The query above can be rewritten with an abstract query, using the same module.
 
-```
+```perl
         @all = $self->pg->db->select(texts => undef,
                                      { sid => $sid },
                                      { order_by => 'sorting_index' })->hashes->each;
@@ -233,11 +241,17 @@ The query above can be rewritten with an abstract query, using the same module.
 
 If it's a simple, static query, it's basically a matter of taste if
 you want to see the SQL or not. The second version is usually nicer if
-you want to build a different query depending on the parameters.
+you want to build a different query depending on the parameters, so
+you add or remove keys to the hashes which maps to query and finally
+execute it.
 
 Now, speaking about tastes, for complex queries with a lot of joins I
 honestly prefer to see the SQL query instead of wondering if the
-abstract one is producing the correct SQL.
+abstract one is producing the correct SQL. This is true regardless of
+the framework. I have sometimes the impression that is faster, safer
+and cleaner to have the explicit SQL in the code rather than having
+future developers (including future me) wondering if the magic is
+happening or not.
 
 Finally, nothing stops you from using `DBIx::Class`, which is the best
 ORM for Perl, even if it's not exactly light on dependencies.
@@ -259,9 +273,19 @@ and I think this is the common problem of the ORMs, regardless of the
 language and framework you're using.
 
 The difference is that with Django, once you have chosen it as your
-framework, you are basically already sold to using the ORM. With
-Mojolicious and in general with the other Perl frameworks (Catalyst,
-Dancer), you still have the decision to make.
+framework, you are basically already sold to the ORM. With Mojolicious
+and in general with the other Perl frameworks (Catalyst, Dancer), you
+still have the decision to make and you can change it, at least in
+theory, down the road.
+
+Actually, my recommendation would be to keep the model, both code and
+business logic, decoupled from the web-specific code. This is not
+really doable with Django, but is fully doable with the Perl
+frameworks. Just put the DB configuration in a dedicated file, the
+business code in appropriated classes, and you should be able to, just
+to make an example, run a script without loading the web and the whole
+framework configuration. In this ideal scenario, the web framework
+just provides the glue between the user and your model.
 
 ### Controllers
 
@@ -295,7 +319,7 @@ sub startup ($self) {
 }
 ```
 
-The `->to` method is basically routing the request to the
+The `->to` method is routing the request to the
 `Myapp::Controller::API::list_texts` will receive the request with the
 `sid` as parameter.
 
@@ -325,3 +349,17 @@ the chain will abort if the API key is not set in the header,
 otherwise it will proceed to the dispatch to the `API` module, `check`
 function.
 
+### Conclusion
+
+I'm after all a Perl guy and I'm a bit biased, but I also have a
+pragmatical approach to programming. Python is widely used, they teach
+it in schools, while Perl is seen as old-school, if not dead (like all
+the mature technologies), so Python could, potentially, attract more
+developers to your project and this is an important thing to consider.
+
+Learning a new language like Python is not a big leap, they are quite
+similar despite the different syntax. I'd throw Ruby in the same
+basket.
+
+Of course both languages provide high quality modules you can use, and
+these two frameworks are an excellent example.
