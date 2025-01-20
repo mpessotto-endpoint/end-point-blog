@@ -1,6 +1,6 @@
 ---
 author: "Marco Pessotto"
-date: 2024-12-20
+date: 2025-01-20
 title: "Django and Mojolicious: a quick comparison of two popular web frameworks"
 tags:
  - perl
@@ -13,6 +13,12 @@ tags:
  - orm
  - dbic
 ---
+
+![Building Frames](/blog/2025/01/architecture-structure-wood-building-beam-construction-1063818-pxhere.webp)
+
+<!-- Photo https://pxhere.com/en/photo/1063818 CC0 Public Domain -->
+
+
 
 ### Django and Mojolicious
 
