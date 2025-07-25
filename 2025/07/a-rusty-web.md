@@ -29,8 +29,8 @@ The Django application uses Xapian (which is written in C++) via its
 core functionality. Reindexing documents would be delegated to a
 [Celery](https://docs.celeryq.dev/en/stable/index.html) task queue.
 
-Unfortunately Xapian does [not](https://xapian.org/docs/bindings/)
-have bindings for Rust so far. 
+Unfortunately Xapian does not have
+[bindings](https://xapian.org/docs/bindings/) for Rust so far.
 
 My reasoning was: I could use the [PostgreSQL full text search
 feature](https://www.postgresql.org/docs/current/textsearch.html)
@@ -100,7 +100,7 @@ The [string
 management](https://doc.rust-lang.org/stable/book/ch08-02-strings.html)
 feels a bit weird because it's normally anchored to the UTF-8
 encoding, while e.g. Perl has an [abstract
-way]((https://www.endpointdev.com/blog/2025/04/encoding-in-perl/) to
+way](https://www.endpointdev.com/blog/2025/04/encoding-in-perl/) to
 handle it, so I'm used to think differently about it.
 
 The `async` feature is nice, but present in my most of the modern
