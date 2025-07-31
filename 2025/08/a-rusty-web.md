@@ -8,6 +8,9 @@ tags:
  - perl
 ---
 
+![Rusty chains](/blog/2025/08/a-rusty-web/wood-chain-ship-rust-iceland-reptile-1359649-pxhere.com.webp)
+<!-- Photo https://pxhere.com/en/photo/1359649 CC0 Public Domain -->
+
 In my programmer's career, centered around web applications, I've
 always used dynamic, interpreted languages: Perl, Javascript, Python
 and Ruby. However, I've always been curious about compiled, strongly
