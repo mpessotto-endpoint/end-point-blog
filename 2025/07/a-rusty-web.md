@@ -5,14 +5,15 @@ title: "A rusty web? An excursion of a Perl guy into the Rust land"
 tags:
  - web
  - rust
+ - perl
 ---
 
-In my programmer's career, centered around the web applications, I've
+In my programmer's career, centered around web applications, I've
 always used dynamic, interpreted languages: Perl, Javascript, Python
 and Ruby. However, I've always been curious about compiled, strongly
 typed languages and if they can be useful to me and to my clients.
-[Rust](https://www.rust-lang.org/) would be my first choice. It's a
-modern language, has an [excellent
+Based on my recent findings, [Rust](https://www.rust-lang.org/) would
+be my first choice. It's a modern language, has [excellent
 documentation](https://doc.rust-lang.org/stable/book/) and it's quite
 popular. However, it's something *very* different from the languages I
 know.
@@ -98,9 +99,9 @@ management](https://doc.rust-lang.org/stable/book/ch08-02-strings.html)
 feels a bit weird because it's normally anchored to the UTF-8
 encoding, while e.g. Perl has an [abstract
 way](https://www.endpointdev.com/blog/2025/04/encoding-in-perl/) to
-handle it, so I'm used to think differently about it.
+handle it, so I'm used to thinking differently about it.
 
-The `async` feature is nice, but present in my most of the modern
+The `async` feature is nice, but present in most of the modern
 languages (Perl included!), so I don't think that should be considered
 the main reason to use Rust.
 
@@ -111,7 +112,7 @@ bread of the sysadmin. It lacks that practical, informal approach I'm
 used to.
 
 Once I got acquainted with the languages, I went shopping for “crates”
-(which is how the modules are called in Rust) here:
+(which is what the modules are called in Rust) here:
 [https://www.arewewebyet.org/](https://www.arewewebyet.org/).
 
 Lately I have a bit of a dislike for object–relational mappings (ORM),
@@ -240,22 +241,23 @@ with Xapian (Python is just providing an interface to the fast C++
 code) winning by a large measure. Even if the Axum application is as
 fast as it can get, because it's stripped to the bare minimum (it has
 no sessions, no authorization, no templates), the time saved is not
-enough to compensate the lack of a dedicated and optimized full text
-search engine like Xapian. Of course I shouldn't be too surprised.
+enough to compensate for the lack of a dedicated and optimized full
+text search engine like Xapian. Of course I shouldn't be too
+surprised.
 
 To actually compete with Django + Xapian, I should probably use
 [Tantivy](https://github.com/quickwit-oss/tantivy), instead of relying
 on the PostgreSQL full text search. But that would be another
 adventure...
 
-Beside the failure of the initial plan, this was really a nice and
-constructive excursion, as I could learn a new language, using its
-libraries to do common and useful tasks like downloading data,
-building a small web applications, interfacing with the database. Rust
-appears to have plenty of quality crates.
+The initial plan turned out to be a failure, but this was really a
+nice and constructive excursion, as I could learn a new language,
+using its libraries to do common and useful tasks like downloading
+data, building small web applications and interfacing with the
+database. Rust appears to have plenty of quality crates.
 
-Beside the fact that this was just a excuse to study a new language,
-remains the fact that rewriting existing, working applications is
+Beside the fact that this was just an excuse to study a new language,
+remains the truth that rewriting existing, working applications is
 extremely unrewarding and most likely ineffective. Reaching the parity
 with the current features requires a lot of time (and budget), and at
 the end of the story the gain could be minimal and better achieved
